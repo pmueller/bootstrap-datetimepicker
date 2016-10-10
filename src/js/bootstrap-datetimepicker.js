@@ -1218,6 +1218,12 @@
                         currentMoment = useCurrentGranularity[options.useCurrent](currentMoment);
                     }
                     setValue(currentMoment);
+                } else if (unset && !options.useCurrent && (options.inline || (input.is('input') && input.val().trim().length === 0))) {
+                    if (typeof options.defaultDate === 'function') {
+                        setValue(parseInputDate(options.defaultDate()));
+                    } else {
+                        setValue(options.defaultDate);
+                    }
                 }
                 widget = getTemplate();
 
@@ -1760,26 +1766,34 @@
                 return picker;
             }
 
-            if (typeof defaultDate === 'string') {
-                if (defaultDate === 'now' || defaultDate === 'moment') {
-                    defaultDate = getMoment();
-                } else {
-                    defaultDate = getMoment(defaultDate);
+            if (typeof defaultDate === 'function') {
+                options.defaultDate = defaultDate;
+            } else {
+                if (typeof defaultDate === 'string') {
+                    if (defaultDate === 'now' || defaultDate === 'moment') {
+                        defaultDate = getMoment();
+                    } else {
+                        defaultDate = getMoment(defaultDate);
+                    }
                 }
+
+                var parsedDate = parseInputDate(defaultDate);
+                if (!parsedDate.isValid()) {
+                    throw new TypeError('defaultDate() Could not parse date parameter: ' + defaultDate);
+                }
+                if (!isValid(parsedDate)) {
+                    throw new TypeError('defaultDate() date passed is invalid according to component setup validations');
+                }
+
+                options.defaultDate = parsedDate;
             }
 
-            var parsedDate = parseInputDate(defaultDate);
-            if (!parsedDate.isValid()) {
-                throw new TypeError('defaultDate() Could not parse date parameter: ' + defaultDate);
-            }
-            if (!isValid(parsedDate)) {
-                throw new TypeError('defaultDate() date passed is invalid according to component setup validations');
-            }
-
-            options.defaultDate = parsedDate;
-
-            if ((options.defaultDate && options.inline) || input.val().trim() === '') {
-                setValue(options.defaultDate);
+            if ((options.defaultDate && options.inline) || (input.val().trim() === '' && input.attr('placeholder') === undefined)) {
+                if (typeof options.defaultDate === 'function') {
+                    setValue(parseInputDate(options.defaultDate()));
+                } else {
+                    setValue(options.defaultDate);
+                }
             }
             return picker;
         };
@@ -2358,7 +2372,11 @@
             setValue(parseInputDate(input.val().trim()));
         }
         else if (options.defaultDate && input.attr('placeholder') === undefined) {
-            setValue(options.defaultDate);
+            if (typeof options.defaultDate === 'function') {
+                setValue(parseInputDate(options.defaultDate()));
+            } else {
+                setValue(options.defaultDate);
+            }
         }
         if (options.inline) {
             show();
